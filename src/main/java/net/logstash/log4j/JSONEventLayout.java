@@ -88,6 +88,8 @@ public class JSONEventLayout extends Layout {
         addFieldData("mdc",mdc);
         addFieldData("ndc",ndc);
         addFieldData("level",loggingEvent.getLevel().toString());
+        addFieldData("thread_name",loggingEvent.getThreadName());
+        addFieldData("logger_name",loggingEvent.getLoggerName());
 
         logstashEvent.put("@fields",fieldData);
         return logstashEvent.toString() + "\n";
