@@ -29,15 +29,16 @@ public class JSONEventLayout extends Layout {
 
     private JSONObject logstashEvent;
 
-    public static String dateFormat(long timestamp) {
+    private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
+    private final ThreadLocal<DateFormat> dateFormatter = new ThreadLocal<DateFormat>() {
+        protected DateFormat initialValue() {
+            return new SimpleDateFormat(DATE_FORMAT);
+        }
+    };
+
+    public String dateFormat(long timestamp) {
 	Date date = new Date(timestamp);
-	/*
-	 * SimpleDateFormat isn't thread safe so I need one 
-	 * instance per call, otherwise I'd have to pull in
-	 * joda time.
-	 */
-	SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
-	String formatted = format.format(date);
+	String formatted = dateFormatter.get().format(date);
 
 	/* 
 	 * No native support for ISO8601 woo!
