@@ -17,6 +17,12 @@ public class MockAppender extends AppenderSkeleton {
 
     @Override
     protected void append(LoggingEvent event){
+        event.getThreadName();
+        event.getRenderedMessage();
+        event.getNDC();
+        event.getMDCCopy();
+        event.getThrowableStrRep();
+        event.getLocationInformation();
         messages.add(layout.format(event));
     }
 
