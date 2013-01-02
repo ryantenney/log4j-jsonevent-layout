@@ -15,19 +15,10 @@ import org.apache.log4j.spi.LocationInfo;
 
 public class JSONEventLayout extends Layout {
 
-    private String tags;
     private boolean ignoreThrowable = false;
-
     private boolean activeIgnoreThrowable = ignoreThrowable;
-    private String hostname;
-    private long timestamp;
-    private String ndc;
-    private Map mdc;
-    private LocationInfo info;
-    private HashMap<String, Object> fieldData;
-    private HashMap<String, Object> exceptionInformation;
 
-    private JSONObject logstashEvent;
+    private String hostname = new HostData().getHostName();
 
     private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
     private final ThreadLocal<DateFormat> dateFormatter = new ThreadLocal<DateFormat>() {
@@ -36,62 +27,52 @@ public class JSONEventLayout extends Layout {
         }
     };
 
-    public String dateFormat(long timestamp) {
-	Date date = new Date(timestamp);
-	String formatted = dateFormatter.get().format(date);
+    private String dateFormat(long timestamp) {
+	    Date date = new Date(timestamp);
+	    String formatted = dateFormatter.get().format(date);
 
-	/* 
-	 * No native support for ISO8601 woo!
-	 */
-	return formatted.substring(0,26) + ":" + formatted.substring(26);
+	    /* 
+	     * No native support for ISO8601 woo!
+	     */
+	    return formatted.substring(0,26) + ":" + formatted.substring(26);
     }
 
     public String format(LoggingEvent loggingEvent) {
-        hostname = new HostData().getHostName();
-        timestamp = loggingEvent.getTimeStamp();
-        info = loggingEvent.getLocationInformation();
-        fieldData = new HashMap<String, Object>();
-        exceptionInformation = new HashMap<String, Object>();
-        mdc = loggingEvent.getProperties();
-        ndc = loggingEvent.getNDC();
+        HashMap<String, Object> fieldData = new NonNullHashMap<String, Object>();
 
-        logstashEvent = new JSONObject();
+        fieldData.put("mdc", loggingEvent.getProperties());
+        fieldData.put("ndc", loggingEvent.getNDC());
+        fieldData.put("level", loggingEvent.getLevel().toString());
+        fieldData.put("thread_name", loggingEvent.getThreadName());
+        fieldData.put("logger_name", loggingEvent.getLoggerName());
 
-        logstashEvent.put("@source_host",hostname);
-        logstashEvent.put("@message",loggingEvent.getRenderedMessage());
-        logstashEvent.put("@timestamp",dateFormat(timestamp));
-
-        if(loggingEvent.getThrowableInformation() != null) {
-            final ThrowableInformation throwableInformation = loggingEvent.getThrowableInformation();
-            if(throwableInformation.getThrowable().getClass().getCanonicalName() != null){
-                exceptionInformation.put("exception_class",throwableInformation.getThrowable().getClass().getCanonicalName());
+        final ThrowableInformation throwableInformation = loggingEvent.getThrowableInformation();
+        if (throwableInformation != null) {
+            HashMap<String, Object> exceptionInformation = new NonNullHashMap<String, Object>();
+            exceptionInformation.put("exception_class", throwableInformation.getThrowable().getClass().getCanonicalName());
+            exceptionInformation.put("exception_message", throwableInformation.getThrowable().getMessage());
+            final String[] stacktrace = throwableInformation.getThrowableStrRep();
+            if (stacktrace != null) {
+                exceptionInformation.put("stacktrace", StringUtils.join(stacktrace,"\n"));
             }
-            if(throwableInformation.getThrowable().getMessage() != null) {
-                exceptionInformation.put("exception_message",throwableInformation.getThrowable().getMessage());
-            }
-            if( throwableInformation.getThrowableStrRep() != null) {
-                String stackTrace = StringUtils.join(throwableInformation.getThrowableStrRep(),"\n");
-                exceptionInformation.put("stacktrace",stackTrace);
-            }
-            addFieldData("exception",exceptionInformation);
+            fieldData.put("exception", exceptionInformation);
         }
 
-
-        if(loggingEvent.locationInformationExists()) {
-            info = loggingEvent.getLocationInformation();
-            addFieldData("file",info.getFileName());
-            addFieldData("line_number",info.getLineNumber());
-            addFieldData("class",info.getClassName());
-            addFieldData("method",info.getMethodName());
+        if (loggingEvent.locationInformationExists()) {
+            final LocationInfo info = loggingEvent.getLocationInformation();
+            fieldData.put("file", info.getFileName());
+            fieldData.put("line_number", info.getLineNumber());
+            fieldData.put("class", info.getClassName());
+            fieldData.put("method", info.getMethodName());
         }
 
-        addFieldData("mdc",mdc);
-        addFieldData("ndc",ndc);
-        addFieldData("level",loggingEvent.getLevel().toString());
-        addFieldData("thread_name",loggingEvent.getThreadName());
-        addFieldData("logger_name",loggingEvent.getLoggerName());
+        JSONObject logstashEvent = new JSONObject();
 
-        logstashEvent.put("@fields",fieldData);
+        logstashEvent.put("@source_host", hostname);
+        logstashEvent.put("@message", loggingEvent.getRenderedMessage());
+        logstashEvent.put("@timestamp", dateFormat(loggingEvent.getTimeStamp()));
+        logstashEvent.put("@fields", fieldData);
+
         return logstashEvent.toString() + "\n";
     }
 
@@ -103,9 +84,4 @@ public class JSONEventLayout extends Layout {
         activeIgnoreThrowable = ignoreThrowable;
     }
 
-    private void addFieldData(String keyname, Object keyval){
-        if(null != keyval){
-            fieldData.put(keyname, keyval);
-        }
-    }
 }
