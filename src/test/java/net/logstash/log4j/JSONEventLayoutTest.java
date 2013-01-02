@@ -1,20 +1,13 @@
 package net.logstash.log4j;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
-
 import org.apache.log4j.Logger;
 import org.apache.log4j.Level;
 import org.apache.log4j.NDC;
-import org.apache.log4j.MDC;
 
-import junit.framework.Assert;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.Ignore;
 
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
@@ -119,6 +112,28 @@ public class JSONEventLayoutTest {
         JSONObject atFields = (JSONObject) jsonObject.get("@fields");
 
         Assert.assertEquals("Logged class does not match",this.getClass().getCanonicalName().toString(),atFields.get("class"));
+    }
+
+    @Test
+    public void testJSONEventHasThreadName() {
+        logger.warn("testing thread name");
+        String message = appender.getMessages()[0];
+        Object obj = JSONValue.parse(message);
+        JSONObject jsonObject = (JSONObject) obj;
+        JSONObject atFields = (JSONObject) jsonObject.get("@fields");
+
+        Assert.assertEquals("Thread name does not match", atFields.get("thread_name"), Thread.currentThread().getName());
+    }
+
+    @Test
+    public void testJSONEventHasLoggerName() {
+        logger.warn("testing logger name");
+        String message = appender.getMessages()[0];
+        Object obj = JSONValue.parse(message);
+        JSONObject jsonObject = (JSONObject) obj;
+        JSONObject atFields = (JSONObject) jsonObject.get("@fields");
+
+        Assert.assertEquals("Logger name does not match", atFields.get("logger_name"), logger.getName());
     }
 
     @Test

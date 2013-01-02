@@ -9,11 +9,12 @@ import org.apache.log4j.Layout;
 
 public class MockAppender extends AppenderSkeleton {
 
-    private static List messages = new ArrayList();
+    private List<String> messages = new ArrayList<String>();
 
     public MockAppender(Layout layout){
         this.layout = layout;
     }
+
     @Override
     protected void append(LoggingEvent event){
         messages.add(layout.format(event));
@@ -27,8 +28,8 @@ public class MockAppender extends AppenderSkeleton {
         return true;
     }
 
-    public static String[] getMessages() {
-        return (String[]) messages.toArray(new String[messages.size()]);
+    public String[] getMessages() {
+        return messages.toArray(new String[0]);
     }
 
     public void clear() {
