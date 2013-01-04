@@ -48,7 +48,6 @@ public class JSONEventLayout extends Layout {
     public String format(LoggingEvent loggingEvent) {
         hostname = new HostData().getHostName();
         timestamp = loggingEvent.getTimeStamp();
-        info = loggingEvent.getLocationInformation();
         fieldData = new HashMap<String, Object>();
         exceptionInformation = new HashMap<String, Object>();
         mdc = loggingEvent.getProperties();
