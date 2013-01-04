@@ -1,5 +1,6 @@
 package net.logstash.log4j;
 
+import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.log4j.Level;
 import org.apache.log4j.NDC;
@@ -9,6 +10,7 @@ import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import net.minidev.json.JSONArray;
 import net.minidev.json.JSONObject;
 import net.minidev.json.JSONValue;
 
@@ -21,6 +23,7 @@ import net.minidev.json.JSONValue;
  */
 public class JSONEventLayoutTest {
     static Logger logger;
+    static JSONEventLayout layout;
     static MockAppender appender;
     static final String[] logstashFields = new String[] {
             "@message",
@@ -31,7 +34,9 @@ public class JSONEventLayoutTest {
 
     @BeforeClass
     public static void setupTestAppender(){
-        appender = new MockAppender(new JSONEventLayout());
+        layout = new JSONEventLayout();
+        layout.setTags("foo,  bar  qux");
+        appender = new MockAppender(layout);
         logger = Logger.getRootLogger();
         appender.setThreshold(Level.TRACE);
         appender.setName("mockappender");
@@ -99,8 +104,8 @@ public class JSONEventLayoutTest {
         JSONObject atFields = (JSONObject) jsonObject.get("@fields");
         JSONObject exceptionInformation = (JSONObject) atFields.get("exception");
 
-        Assert.assertEquals("Exception class missing","java.lang.IllegalArgumentException",exceptionInformation.get("exception_class"));
-        Assert.assertEquals("Exception exception message",exceptionMessage,exceptionInformation.get("exception_message"));
+        Assert.assertEquals("Exception class missing", "java.lang.IllegalArgumentException", exceptionInformation.get("exception_class"));
+        Assert.assertEquals("Exception exception message", exceptionMessage, exceptionInformation.get("exception_message"));
     }
 
     @Test
@@ -111,7 +116,7 @@ public class JSONEventLayoutTest {
         JSONObject jsonObject = (JSONObject) obj;
         JSONObject atFields = (JSONObject) jsonObject.get("@fields");
 
-        Assert.assertEquals("Logged class does not match",this.getClass().getCanonicalName().toString(),atFields.get("class"));
+        Assert.assertEquals("Logged class does not match", this.getClass().getCanonicalName().toString(), atFields.get("class"));
     }
 
     @Test
@@ -122,7 +127,7 @@ public class JSONEventLayoutTest {
         JSONObject jsonObject = (JSONObject) obj;
         JSONObject atFields = (JSONObject) jsonObject.get("@fields");
 
-        Assert.assertEquals("Thread name does not match", atFields.get("thread_name"), Thread.currentThread().getName());
+        Assert.assertEquals("Thread name does not match", Thread.currentThread().getName(), atFields.get("thread_name"));
     }
 
     @Test
@@ -133,7 +138,7 @@ public class JSONEventLayoutTest {
         JSONObject jsonObject = (JSONObject) obj;
         JSONObject atFields = (JSONObject) jsonObject.get("@fields");
 
-        Assert.assertEquals("Logger name does not match", atFields.get("logger_name"), logger.getName());
+        Assert.assertEquals("Logger name does not match", logger.getName(), atFields.get("logger_name"));
     }
 
     @Test
@@ -145,6 +150,17 @@ public class JSONEventLayoutTest {
         JSONObject atFields = (JSONObject) jsonObject.get("@fields");
 
         Assert.assertNotNull("File value is missing", atFields.get("file"));
+    }
+
+    @Test
+    public void testJSONEventHasTags() {
+        logger.warn("testing tags");
+        String message = appender.getMessages()[0];
+        Object obj = JSONValue.parse(message);
+        JSONObject jsonObject = (JSONObject) obj;
+        JSONArray tags = (JSONArray) jsonObject.get("@tags");
+
+        Assert.assertEquals("Tags don't match", "foo, bar, qux", StringUtils.join(tags.toArray(), ", "));
     }
 
 }

@@ -15,10 +15,10 @@ import org.apache.log4j.spi.LocationInfo;
 
 public class JSONEventLayout extends Layout {
 
-    private boolean ignoreThrowable = false;
-    private boolean activeIgnoreThrowable = ignoreThrowable;
-
-    private String hostname = new HostData().getHostName();
+    private String[] tags = null;
+    private String source = null;
+    private String sourceHost = null;
+    private String sourcePath = null;
 
     private static final String DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSSZ";
     private final ThreadLocal<DateFormat> dateFormatter = new ThreadLocal<DateFormat>() {
@@ -27,14 +27,14 @@ public class JSONEventLayout extends Layout {
         }
     };
 
-    private String dateFormat(long timestamp) {
-	    Date date = new Date(timestamp);
-	    String formatted = dateFormatter.get().format(date);
+    public String dateFormat(long timestamp) {
+        Date date = new Date(timestamp);
+        String formatted = dateFormatter.get().format(date);
 
-	    /* 
-	     * No native support for ISO8601 woo!
-	     */
-	    return formatted.substring(0,26) + ":" + formatted.substring(26);
+        /* 
+       	 * No native support for ISO8601 woo!
+         */
+        return formatted.substring(0,26) + ":" + formatted.substring(26);
     }
 
     public String format(LoggingEvent loggingEvent) {
@@ -68,7 +68,10 @@ public class JSONEventLayout extends Layout {
 
         JSONObject logstashEvent = new JSONObject();
 
-        logstashEvent.put("@source_host", hostname);
+        logstashEvent.put("@source", this.source);
+        logstashEvent.put("@source_host", this.sourceHost);
+        logstashEvent.put("@source_path", this.sourcePath);
+        logstashEvent.put("@tags", this.tags);
         logstashEvent.put("@message", loggingEvent.getRenderedMessage());
         logstashEvent.put("@timestamp", dateFormat(loggingEvent.getTimeStamp()));
         logstashEvent.put("@fields", fieldData);
@@ -77,11 +80,29 @@ public class JSONEventLayout extends Layout {
     }
 
     public boolean ignoresThrowable() {
-        return ignoreThrowable;
+        return false;
+    }
+
+    public void setSource(String source) {
+        this.source = source;
+    }
+
+    public void setSourceHost(String sourceHost) {
+        this.sourceHost = sourceHost;
+    }
+
+    public void setSourcePath(String sourcePath) {
+        this.sourcePath = sourcePath;
+    }
+
+    public void setTags(String tags) {
+        this.tags = StringUtils.split(tags, ", ");
     }
 
     public void activateOptions() {
-        activeIgnoreThrowable = ignoreThrowable;
+        if (this.sourceHost == null) {
+            this.sourceHost = new HostData().getHostName();
+        }
     }
 
 }
